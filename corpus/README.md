@@ -10,15 +10,16 @@ Rebuild with `python corpus/build.py` (standard library only, no dependencies).
 
 ## Contents
 
-| File | Instrument | Size | Relevance |
+| File | Instrument | Characters | Relevance |
 |---|---|---|---|
-| `gdpr.txt` | Regulation (EU) 2016/679, Articles 1 to 99 | 188 KB | Data protection |
-| `data-protection-act-2018.txt` | Data Protection Act 2018 (Ireland) | 440 KB | Data protection |
-| `employment-equality-act-1998.txt` | Employment Equality Act 1998 | 213 KB | Employment |
-| `residential-tenancies-act-2004.txt` | Residential Tenancies Act 2004 | 317 KB | Real estate |
-| `unfair-dismissals-act-1977.txt` | Unfair Dismissals Act 1977 | 43 KB | Employment |
+| `gdpr.txt` | Regulation (EU) 2016/679, Articles 1 to 99 | 188,435 | Data protection |
+| `data-protection-act-2018.txt` | Data Protection Act 2018 (Ireland) | 408,791 | Data protection |
+| `residential-tenancies-act-2004.txt` | Residential Tenancies Act 2004 | 293,763 | Real estate |
+| `employment-equality-act-1998.txt` | Employment Equality Act 1998 | 197,710 | Employment |
+| `unfair-dismissals-act-1977.txt` | Unfair Dismissals Act 1977 | 40,546 | Employment |
 
-Roughly 1.2 million characters across five instruments.
+1,129,245 characters across five instruments. Character counts, not bytes,
+and they are exact: a build that does not reproduce them has diverged.
 
 ## Why these
 
@@ -41,9 +42,9 @@ exist whose answer lives in one and not the other.
   reproducibly. The article text matches the Official Journal; the provenance is
   stated here rather than glossed over.
 
-## Two defects found while preparing this
+## Three defects found while preparing this
 
-Neither raised an error. Both are recorded here because a silent defect in the
+None raised an error. All are recorded here because a silent defect in the
 corpus becomes a silent defect in the evaluation.
 
 **Mixed encoding in a single document.** Irish Statute Book pages serve cp1252
@@ -57,6 +58,19 @@ container out of the raw bytes before decoding anything.
 positions. The character is invisible when rendered, so the text looks correct,
 but a substring search for `Sonraí` will not match `Sonra{U+00AD}í`. Since this
 corpus is searched by substring, they are stripped at ingest.
+
+**Line endings that depended on the machine.** The source pages are CRLF.
+Python's `write_text` translates newlines on write unless told not to, and Git
+translates again on checkout, so the same build produced different bytes on
+Windows and elsewhere. Character offsets are computed against these files, so
+"how many characters is Article 33" had a different answer depending on who ran
+the build. Fixed in three places, because all three were doing translation:
+normalised at extraction, written with an explicit newline, and pinned in
+`.gitattributes`.
+
+**The pattern in all three:** the data looked correct at every point. Nothing
+warned, nothing failed. Each was found by checking a number against a number
+obtained a different way.
 
 ## Preparing more documents
 
