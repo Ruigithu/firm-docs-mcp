@@ -30,3 +30,6 @@ desktop.ini
 # Added by cargo
 
 /target
+
+# Downloaded HTML, reproducible via build.py
+corpus/raw/
