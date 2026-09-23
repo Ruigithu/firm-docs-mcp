@@ -81,7 +81,7 @@ def build_irish_acts() -> None:
         body = m.group(1).decode("utf-8", errors="replace")
         text = f"{title}\n\n{strip_html(body)}"
         out = ROOT / f"{slug}.txt"
-        out.write_text(text, encoding="utf-8")
+        out.write_text(text, encoding="utf-8", newline="\n")
         parts = len(re.findall(r"(?m)^\s*\d+\.", text))
         print(f"{out.name}: {out.stat().st_size:,} bytes, ~{parts} numbered provisions")
 
@@ -108,7 +108,7 @@ def build_gdpr() -> None:
         parts += [f"===== Article {n} =====", body, ""]
         got += 1
         time.sleep(0.4)
-    out.write_text("\n".join(parts), encoding="utf-8")
+    out.write_text("\n".join(parts), encoding="utf-8", newline="\n")
     print(f"gdpr.txt: {out.stat().st_size:,} bytes, {got}/99 articles")
     if missing:
         print("  missing:", missing[:10])
