@@ -1,0 +1,32 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Secrets and tokens
+.env
+.env.*
+*.token
+token_cache.json
+secrets/
+
+# Python / uv
+.venv/
+__pycache__/
+.pytest_cache/
+
+# Personal working notes
+NOTES.local.md
+
+# Corpus binaries (see corpus/README.md)
+corpus/*.pdf
+corpus/*.docx
+
+# OS
+Thumbs.db
+desktop.ini
+.DS_Store
+
+
+# Added by cargo
+
+/target
