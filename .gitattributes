@@ -1,0 +1,12 @@
+# The corpus is data, not source. Chunk boundaries and character offsets are
+# computed against these files, so they must be byte-identical on every
+# platform. Without this, Git checks them out with CRLF on Windows and LF
+# elsewhere, and the same code produces different offsets on different
+# machines with nothing to indicate why.
+corpus/*.txt text eol=lf
+
+# Source and config: normalise in the repository, check out natively.
+*.rs   text
+*.toml text
+*.md   text
+*.py   text
