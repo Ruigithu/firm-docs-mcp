@@ -15,14 +15,14 @@ model asked for, what it was given, and what it was refused.
 Each milestone is independently demonstrable. The project is useful from M1
 onward; M2 and M3 are what make it defensible.
 
-### M0 — Environment
+### M0: Environment
 
 - [ ] Rust toolchain installed and verified
 - [ ] `uv` installed and verified
 - [ ] Repository initialised, `.gitignore` covering build output and secrets
 - [ ] Test corpus assembled (public legal texts only)
 
-### M1 — Working MCP server over local files
+### M1: Working MCP server over local files
 
 - [ ] `DocumentSource` trait: `search` and `read`
 - [ ] `LocalFs` implementation reading from `corpus/`
@@ -36,7 +36,7 @@ onward; M2 and M3 are what make it defensible.
 of a personal data breach?" returns 72 hours, citing GDPR Article 33, with the
 source file named.
 
-### M2 — Microsoft Graph as a data source
+### M2: Microsoft Graph as a data source
 
 - [ ] Entra ID app registration, delegated `Files.Read` and `offline_access`
 - [ ] OAuth 2.0 authorization code flow with PKCE
@@ -58,7 +58,7 @@ rather than reimplemented here. This is deliberate: in a professional services
 setting, existing permissions already encode information barriers, and
 reimplementing them is risk without benefit.
 
-### M3 — Context budget, audit, and tests
+### M3: Context budget, audit, and tests
 
 - [ ] Chunking and relevance ordering
 - [ ] Response fits a stated character budget
@@ -73,7 +73,7 @@ reimplementing them is risk without benefit.
 **Done when:** `cargo test` passes offline and the audit log accounts for every
 call made during a session, including the ones that were refused.
 
-### M4 — Evaluation
+### M4: Evaluation
 
 - [ ] Python evaluation harness managed with `uv`
 - [ ] 20–25 cases across four categories:
@@ -87,7 +87,7 @@ call made during a session, including the ones that were refused.
 **Done when:** the README carries real numbers, and every failing case has a
 stated cause.
 
-### M5 — Delivery
+### M5: Delivery
 
 - [ ] CI: `cargo fmt --check`, `cargo clippy -D warnings`, `cargo test`,
       `uv run pytest`
