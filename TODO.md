@@ -17,10 +17,10 @@ onward; M2 and M3 are what make it defensible.
 
 ### M0: Environment
 
-- [ ] Rust toolchain installed and verified
-- [ ] `uv` installed and verified
-- [ ] Repository initialised, `.gitignore` covering build output and secrets
-- [ ] Test corpus assembled (public legal texts only)
+- [x] Rust toolchain installed and verified
+- [x] `uv` installed and verified
+- [x] Repository initialised, `.gitignore` covering build output and secrets
+- [x] Test corpus assembled (public legal texts only)
 
 ### M1: Working MCP server over local files
 
