@@ -74,6 +74,11 @@ obtained a different way.
 
 ## Preparing more documents
 
-Add an entry to `IRISH_ACTS` in `build.py` and place the `print` view HTML in
-`corpus/raw/`. Citation accuracy is scored against section and article numbers,
-so the numbering must survive extraction.
+Add an entry to `IRISH_ACTS` in `build.py` with the Act's slug, title and
+`print` view URL. The page downloads on the next build. Citation accuracy is
+scored against section and Article numbers, so the numbering must survive
+extraction.
+
+A build from a clean checkout reproduces the character counts above exactly.
+If yours differ, the extraction has diverged and the evaluation numbers no
+longer describe the same corpus.
