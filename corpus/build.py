@@ -45,6 +45,9 @@ def fetch(url: str) -> str:
 
 def strip_html(fragment: str) -> str:
     """Reduce an HTML fragment to plain text, keeping line structure."""
+    # The source pages use CRLF. Offsets are computed against the output, so
+    # the line endings must not depend on the platform the build ran on.
+    fragment = fragment.replace("\r\n", "\n").replace("\r", "\n")
     fragment = re.sub(r"(?is)<(script|style|nav|footer|header).*?</\1>", " ", fragment)
     # The Irish Statute Book renders both languages; keep the English.
     fragment = re.sub(r'(?is)<[^>]*class="irish_language"[^>]*>.*?</[a-z]+>', " ", fragment)
