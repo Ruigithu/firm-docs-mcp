@@ -7,13 +7,25 @@ Python interpreter and no environment setup. Run from the repository root:
     python corpus/build.py irish    # Irish Acts only
     python corpus/build.py gdpr     # GDPR only
 
+Source pages are downloaded into corpus/raw/ on first run and reused after
+that, so repeated builds do not hit the source sites again. Delete that
+directory to force a fresh download.
+
 Provenance is recorded in corpus/README.md. Every document here is published
 law. No client material is used at any point in this project.
 
-Note on encoding: irishstatutebook.ie serves a single document in two
-encodings, cp1252 navigation around a UTF-8 act body. Decoding the page as
-either one corrupts the other half with no error raised. The act container is
-therefore sliced out of the raw bytes before anything is decoded.
+Two things this file exists to get right, both of which fail silently:
+
+Encoding. irishstatutebook.ie serves a single document in two encodings,
+cp1252 navigation wrapped around a UTF-8 Act body, while declaring UTF-8 in
+its meta tag. Decoding the page as either one corrupts the other half and
+raises nothing. The Act container is sliced out of the raw bytes before
+anything is decoded.
+
+Line endings. The source pages are CRLF, Python translates newlines on write
+unless told not to, and Git translates again on checkout. Character offsets
+are computed against the output, so the same build must produce the same
+bytes regardless of the platform it ran on.
 """
 
 import html
@@ -29,18 +41,43 @@ UA = (
     "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
 )
 
+ISB = "https://www.irishstatutebook.ie/eli"
+
+# slug -> (title, source url). The print view carries the whole Act; the
+# default view is only a table of contents.
 IRISH_ACTS = {
-    "dpa_print": ("data-protection-act-2018", "Data Protection Act 2018"),
-    "employment_equality_1998": ("employment-equality-act-1998", "Employment Equality Act 1998"),
-    "residential_tenancies_2004": ("residential-tenancies-act-2004", "Residential Tenancies Act 2004"),
-    "unfair_dismissals_1977": ("unfair-dismissals-act-1977", "Unfair Dismissals Act 1977"),
+    "data-protection-act-2018": (
+        "Data Protection Act 2018",
+        f"{ISB}/2018/act/7/enacted/en/print",
+    ),
+    "residential-tenancies-act-2004": (
+        "Residential Tenancies Act 2004",
+        f"{ISB}/2004/act/27/enacted/en/print",
+    ),
+    "employment-equality-act-1998": (
+        "Employment Equality Act 1998",
+        f"{ISB}/1998/act/21/enacted/en/print",
+    ),
+    "unfair-dismissals-act-1977": (
+        "Unfair Dismissals Act 1977",
+        f"{ISB}/1977/act/10/enacted/en/print",
+    ),
 }
 
 
-def fetch(url: str) -> str:
+def fetch_bytes(url: str) -> bytes:
+    """Fetch without decoding.
+
+    The caller decides the encoding, because these pages do not agree with
+    their own meta tag.
+    """
     req = urllib.request.Request(url, headers={"User-Agent": UA})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return r.read().decode("utf-8", errors="replace")
+    with urllib.request.urlopen(req, timeout=120) as response:
+        return response.read()
+
+
+def fetch(url: str) -> str:
+    return fetch_bytes(url).decode("utf-8", errors="replace")
 
 
 def strip_html(fragment: str) -> str:
@@ -64,55 +101,74 @@ def strip_html(fragment: str) -> str:
     return fragment.strip()
 
 
+def write_text(path: Path, text: str) -> None:
+    """Write UTF-8 with LF, on every platform."""
+    path.write_text(text, encoding="utf-8", newline="\n")
+    print(f"{path.name}: {len(text):,} chars")
+
+
+def source_page(slug: str, url: str) -> bytes | None:
+    """Return the raw page bytes, downloading once and caching in raw/."""
+    cached = RAW / f"{slug}.html"
+    if cached.exists():
+        return cached.read_bytes()
+
+    RAW.mkdir(exist_ok=True)
+    print(f"downloading {slug}")
+    try:
+        data = fetch_bytes(url)
+    except Exception as exc:
+        print(f"  failed: {type(exc).__name__}: {exc}")
+        return None
+    cached.write_bytes(data)
+    time.sleep(1)
+    return data
+
+
 def build_irish_acts() -> None:
-    for stem, (slug, title) in IRISH_ACTS.items():
-        src = RAW / f"{stem}.html"
-        if not src.exists():
-            print(f"skip {slug}: {src.name} not downloaded")
+    for slug, (title, url) in IRISH_ACTS.items():
+        raw = source_page(slug, url)
+        if raw is None:
             continue
-        # The page is mixed encoding: cp1252 site chrome wrapped around a
-        # UTF-8 act body. Slice the container out of the raw bytes first, then
-        # decode that fragment as what it actually is. Decoding the whole page
-        # as either encoding corrupts the other half, and does so silently.
-        raw = src.read_bytes()
-        m = re.search(
+
+        match = re.search(
             rb'(?is)<div[^>]*id="act"[^>]*>(.*?)<div[^>]*id="includedFooter"', raw
         )
-        if not m:
-            print(f"skip {slug}: act container not found")
+        if not match:
+            print(f"skip {slug}: Act container not found, the page layout may have changed")
             continue
-        body = m.group(1).decode("utf-8", errors="replace")
-        text = f"{title}\n\n{strip_html(body)}"
-        out = ROOT / f"{slug}.txt"
-        out.write_text(text, encoding="utf-8", newline="\n")
-        parts = len(re.findall(r"(?m)^\s*\d+\.", text))
-        print(f"{out.name}: {out.stat().st_size:,} bytes, ~{parts} numbered provisions")
+
+        body = match.group(1).decode("utf-8", errors="replace")
+        write_text(ROOT / f"{slug}.txt", f"{title}\n\n{strip_html(body)}")
 
 
 def build_gdpr() -> None:
-    """GDPR is published one article per page on this mirror, so fetch each."""
-    out = ROOT / "gdpr.txt"
+    """GDPR is published one Article per page on this mirror, so fetch each."""
     parts = ["Regulation (EU) 2016/679 (General Data Protection Regulation)", ""]
     got, missing = 0, []
+
     for n in range(1, 100):
         try:
             page = fetch(f"https://gdpr-info.eu/art-{n}-gdpr/")
         except Exception as exc:
             missing.append((n, type(exc).__name__))
             continue
-        m = re.search(
+
+        match = re.search(
             r'(?is)<div[^>]*class="entry-content"[^>]*>(.*?)(?:<footer|</article)', page
         )
-        body = strip_html(m.group(1) if m else "")
+        body = strip_html(match.group(1) if match else "")
         body = re.split(r"(?i)\n\s*Suitable Recitals\s*\n", body)[0].strip()
         if not body:
             missing.append((n, "empty"))
             continue
+
         parts += [f"===== Article {n} =====", body, ""]
         got += 1
         time.sleep(0.4)
-    out.write_text("\n".join(parts), encoding="utf-8", newline="\n")
-    print(f"gdpr.txt: {out.stat().st_size:,} bytes, {got}/99 articles")
+
+    write_text(ROOT / "gdpr.txt", "\n".join(parts))
+    print(f"  {got}/99 Articles")
     if missing:
         print("  missing:", missing[:10])
 
